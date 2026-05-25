@@ -1,0 +1,138 @@
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <vector>
+#include <string>
+#include <limits>
+
+using namespace std;
+
+// Función para leer frecuencias desde archivo
+vector<int> leerFrecuencias(const string& nombreArchivo) {
+	vector<int> fc;
+	ifstream archivo(nombreArchivo);
+
+	int dato;
+
+	if (archivo.is_open()) {
+		while (archivo >> dato) {
+			fc.push_back(dato);
+		}
+		archivo.close();
+	} else {
+		cout << "No se pudo abrir el archivo: " << nombreArchivo << endl;
+	}
+
+	return fc;
+}
+
+// Función para detectar Taquicardia Sostenida
+bool detectarTaquicardia(const vector<int>& fc, int &inicio, int &fin) {
+	int consecutivos = 0;
+
+	for (int i = 0; i < (int)fc.size(); i++) {
+		if (fc[i] > 100) {
+			consecutivos++;
+			if (consecutivos > 5) {
+				// convertir índices (0-based) a minutos (1-based)
+				inicio = i - consecutivos + 2;
+				fin = i + 1;
+				return true;
+			}
+		} else {
+			consecutivos = 0;
+		}
+	}
+
+	return false;
+}
+
+// Función para detectar Fatiga por Esfuerzo
+bool detectarFatiga(const vector<int>& fc, double &promInicio, double &promFinal) {
+	if (fc.size() < 60) return false;
+
+	int sumaInicio = 0;
+	int sumaFinal = 0;
+
+	for (int i = 0; i < 10; i++) {
+		sumaInicio += fc[i];
+	}
+
+	for (int i = 50; i < 60; i++) {
+		sumaFinal += fc[i];
+	}
+
+	promInicio = sumaInicio / 10.0;
+	promFinal = sumaFinal / 10.0;
+
+	if (promFinal > promInicio * 1.20) {
+		return true;
+	}
+
+	return false;
+}
+
+int main() {
+	int opcion = 0;
+
+	do {
+		string paciente;
+		string archivo;
+
+		cout << "======================================" << endl;
+		cout << " DETECTOR DE ARRITMIA CARDIACA " << endl;
+		cout << "======================================" << endl;
+
+		cout << "Ingrese nombre del paciente: ";
+		getline(cin >> ws, paciente);
+
+		cout << "Ingrese nombre del archivo de texto: ";
+		getline(cin >> ws, archivo);
+
+		vector<int> fc = leerFrecuencias(archivo);
+
+		if (fc.size() != 60) {
+			cout << "El archivo debe contener 60 lecturas. Se leyeron: " << fc.size() << endl;
+		} else {
+			bool problema = false;
+			int inicio = 0, fin = 0;
+
+			// TAQUICARDIA
+			if (detectarTaquicardia(fc, inicio, fin)) {
+				cout << "\nTaquicardia Sostenida detectada." << endl;
+				cout << "Se produjo entre los minutos " << inicio << " y " << fin << endl;
+				problema = true;
+			}
+
+			// FATIGA
+			double promInicio = 0.0, promFinal = 0.0;
+			if (detectarFatiga(fc, promInicio, promFinal)) {
+				cout << "\nFatiga por Esfuerzo detectada." << endl;
+				cout << "Promedio primeros 10 minutos: " << promInicio << " bpm" << endl;
+				cout << "Promedio ultimos 10 minutos: " << promFinal << " bpm" << endl;
+				problema = true;
+			}
+
+			// SIN PROBLEMAS
+			if (!problema) {
+				cout << "\nPaciente sin complicaciones cardiacas." << endl;
+			}
+		}
+
+		cout << "\nDesea evaluar otro paciente?" << endl;
+		cout << "1. SI" << endl;
+		cout << "2. NO" << endl;
+		cout << "Opcion: ";
+		if (!(cin >> opcion)) {
+			opcion = 2; // salir si entrada inválida
+			cin.clear();
+			cin.ignore(numeric_limits<streamsize>::max(), '\n');
+		}
+		// limpiar resto de la línea antes del siguiente getline
+		cin.ignore(numeric_limits<streamsize>::max(), '\n');
+
+	} while (opcion == 1);
+
+	cout << "\nPrograma finalizado." << endl;
+	return 0;
+}
